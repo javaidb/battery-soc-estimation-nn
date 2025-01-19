@@ -1,1 +1,3 @@
-# battery-soc-estimation-nn
+# Battery State Estimation using Neural Nets (SOC)
+
+> This repository is a part of a series of repositories aimed at deepening personal understanding of lithium-ion battery management systems along with practical implementations and contexts. Through this repo, SOC estimation techniques using NNs are explored for me to expand on experience learnt in career + courses + self-learning while identifying areas for self-improvement in my own knowledge and skills. It is designed more so as a sandbox for me to develop, test and implement state estimation techniques for various sample li-ion batteries.
