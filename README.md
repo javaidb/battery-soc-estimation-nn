@@ -19,3 +19,8 @@ source .venv_soc_nn/bin/activate  # Linux/Mac
 .venv_soc_nn\Scripts\activate  # Windows
 python -m ipykernel install --name ".venv_soc_nn" --display-name "NN (SOC est.)" --user
 ```
+Otherwise, you can install the dependencies using the following command:
+
+```bash
+pip install -r requirements.txt
+```
