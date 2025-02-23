@@ -1,0 +1,36 @@
+services:
+
+  cuda_model_trainer:
+    image: cuda_model_trainer
+    container_name: training
+    build: .
+    restart: "no"
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+      - ./training:/app/training
+#      - ~/.gitconfig:/root/.gitconfig
+#      - ~/.ssh:/root/.ssh:ro
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    tty: true
+    command: python /app/scripts/train_model_sample.py
+
+  mlflow:
+    image: cuda_model_trainer
+    container_name: mlflow
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/app/mlruns
+    command: mlflow ui --host 0.0.0.0
+    depends_on:
+      - cuda_model_trainer
