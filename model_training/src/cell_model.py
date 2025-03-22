@@ -1,8 +1,28 @@
 from torch import Tensor, nn
 import torch.nn.functional as F
 
-
 class LSTM(nn.Module):
+    def __init__(
+        self, input_size: int, hidden_size: int, output_size: int, num_lstm_layers: int
+    ) -> None:
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_lstm_layers = num_lstm_layers
+
+        self.lstm = nn.LSTM(
+            input_size=input_size, hidden_size=hidden_size, num_layers=num_lstm_layers
+        )
+        self.fc_layer = nn.Linear(in_features=hidden_size, out_features=output_size)
+
+    def forward(self, X: Tensor) -> Tensor:
+        lstm_output, _ = self.lstm(X)
+        model_output = self.fc_layer(lstm_output)
+
+        return model_output
+
+class oLSTM(nn.Module):
     def __init__(
         self, 
         input_size: int, 
@@ -17,6 +37,11 @@ class LSTM(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.num_lstm_layers = num_lstm_layers
+        self.num_heads = 4
+        
+        # Ensure hidden_size is divisible by num_heads when bidirectional
+        if bidirectional and hidden_size % self.num_heads != 0:
+            self.hidden_size = ((hidden_size + (self.num_heads - 1)) // self.num_heads) * self.num_heads
         
         # Bidirectional LSTM for better temporal pattern recognition
         # - Processes sequence in both directions to capture future and past dependencies
@@ -24,7 +49,7 @@ class LSTM(nn.Module):
         # - Applies dropout between layers for regularization when multi-layer
         self.lstm = nn.LSTM(
             input_size=input_size,
-            hidden_size=hidden_size,
+            hidden_size=self.hidden_size,
             num_layers=num_lstm_layers,
             dropout=dropout if num_lstm_layers > 1 else 0,
             bidirectional=bidirectional,
@@ -35,10 +60,10 @@ class LSTM(nn.Module):
         # - Uses 4 attention heads to capture different types of patterns
         # - Each head can focus on different aspects (e.g., short vs long-term dependencies)
         # - Helps model identify important temporal relationships in battery behavior
-        lstm_output_size = hidden_size * 2 if bidirectional else hidden_size
+        lstm_output_size = self.hidden_size * 2 if bidirectional else self.hidden_size
         self.attention = nn.MultiheadAttention(
             embed_dim=lstm_output_size,
-            num_heads=4,
+            num_heads=self.num_heads,
             dropout=dropout,
             batch_first=True
         )
@@ -58,6 +83,9 @@ class LSTM(nn.Module):
         self.layer_norm = nn.LayerNorm(lstm_output_size)
         
     def forward(self, X: Tensor) -> Tensor:
+        # Ensure input is contiguous in memory
+        X = X.contiguous()
+        
         # LSTM processing
         lstm_output, _ = self.lstm(X)
         
