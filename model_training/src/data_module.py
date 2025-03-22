@@ -62,16 +62,18 @@ class LGHG2Dataset(Dataset):
     def __getitem__(self, index: int):
         df = self.data[index]
 
+        # OCV_col = self.ocv_col
         X_cols = [self.soc_col, self.current_col, self.temperature_col]
-        Y_col = self.overpotential_col
+        Y_col = self.overpotential_col  # self.voltage_col
         data_length = len(df[self.time_col])
 
-        # Create tensors and ensure they are contiguous
+        # OCV = torch.tensor(df[OCV_col], dtype=torch.float32).view(data_length, 1)
         X = torch.stack(
-            [torch.tensor(df[col], dtype=torch.float32).contiguous() for col in X_cols], dim=1
+            [torch.tensor(df[col], dtype=torch.float32) for col in X_cols], dim=1
         )
-        Y = torch.tensor(df[Y_col], dtype=torch.float32).contiguous().view(data_length, 1)
+        Y = torch.tensor(df[Y_col], dtype=torch.float32).view(data_length, 1)
 
+        # return (OCV, X), Y
         return X, Y
 
 
