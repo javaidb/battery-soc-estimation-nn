@@ -178,9 +178,19 @@ def get_objective_function(training_config: TrainingConfig, logger: Logger) -> C
 
             print("\n=== Starting Training ===")
             trainer.fit(training_module, data_module)
-            validation_accuracy = trainer.logged_metrics.get("validation_accuracy")
-            print(f"Training completed. Validation accuracy: {validation_accuracy}")
-
+            
+            # Debug logging for metrics
+            print("\n=== Debug: Available Metrics ===")
+            for key, value in trainer.logged_metrics.items():
+                print(f"{key}: {value}")
+            
+            validation_accuracy = trainer.logged_metrics.get("val_accuracy_epoch")
+            print(f"\nTraining completed. Validation accuracy: {validation_accuracy}")
+            
+            if validation_accuracy is None:
+                print("WARNING: Validation accuracy is None. Using validation loss as fallback.")
+                validation_accuracy = trainer.logged_metrics.get("val_loss_epoch")
+            
             return validation_accuracy
 
     return objective
@@ -246,8 +256,8 @@ def run_hyperparameter_tuning(training_config: TrainingConfig) -> None:
 
     print("\n=== Starting Optuna Study ===")
     with logger.start_hyperparameter_tuning_logs():
-        study = optuna.create_study(direction="minimize")
-        print("Created Optuna study with 'minimize' direction")
+        study = optuna.create_study(direction="maximize")  # Changed to maximize for accuracy
+        print("Created Optuna study with 'maximize' direction")
         
         print("\n=== Running Optimization ===")
         study.optimize(objective, n_trials=training_config.num_trials)
