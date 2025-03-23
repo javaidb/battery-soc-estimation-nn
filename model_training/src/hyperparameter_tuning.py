@@ -6,6 +6,7 @@ import optuna
 from lightning.pytorch.callbacks import Callback
 from optuna.trial import Trial
 from torch import Tensor
+import mlflow
 
 from src.hyperparameter import (
     CategoricalHyperparameter,
@@ -184,12 +185,16 @@ def get_objective_function(training_config: TrainingConfig, logger: Logger) -> C
             for key, value in trainer.logged_metrics.items():
                 print(f"{key}: {value}")
             
+            # Get validation accuracy for the epoch
             validation_accuracy = trainer.logged_metrics.get("val_accuracy_epoch")
             print(f"\nTraining completed. Validation accuracy: {validation_accuracy}")
             
-            if validation_accuracy is None:
-                print("WARNING: Validation accuracy is None. Using validation loss as fallback.")
+            if validation_accuracy is None or float(validation_accuracy) == float("nan"):
+                print("WARNING: Validation accuracy is None or NaN. Using validation loss as fallback.")
                 validation_accuracy = trainer.logged_metrics.get("val_loss_epoch")
+                if validation_accuracy is None or float(validation_accuracy) == float("nan"):
+                    print("ERROR: Both validation accuracy and loss are None or NaN. Returning -inf.")
+                    return float("-inf")
             
             return validation_accuracy
 
@@ -262,6 +267,10 @@ def run_hyperparameter_tuning(training_config: TrainingConfig) -> None:
         print("\n=== Running Optimization ===")
         study.optimize(objective, n_trials=training_config.num_trials)
         print(f"Optimization completed. Best trial value: {study.best_value}")
+        
+        # Log the best trial's parameters and value
+        mlflow.log_params(study.best_trial.params)
+        mlflow.log_metric("best_trial_value", study.best_value)
         
         print("\n=== Testing Best Trial ===")
         test_best_trial(
