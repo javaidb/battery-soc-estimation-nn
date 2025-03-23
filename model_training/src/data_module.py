@@ -19,11 +19,9 @@ class LGHG2Dataset(Dataset):
     overpotential_col = "Overpotential [V]"
 
     norm_settings = {
-        # voltage_col: (2.5, 4.2),
         current_col: (-20, 20),
         temperature_col: (-30, 50),
         soc_col: (0, 1),
-        # ocv_col: (2.5, 4.2),
         overpotential_col: (-1, 1),
     }
 
@@ -37,23 +35,27 @@ class LGHG2Dataset(Dataset):
                 filter(lambda f: f.endswith("parquet"), os.listdir(T_directory))
             )
 
-            dfs = [pd.read_parquet(f"{T_directory}/{f}") for f in file_names]
-            dfs = [self.calculate_overpotential(df) for df in dfs]
-            dfs = [self.normalize_data(df) for df in dfs]
-
-            self.data.extend(dfs)
-            self.dataset_names.extend(file_names)
-            break
+            for f in file_names:
+                df = pd.read_parquet(f"{T_directory}/{f}")
+                df = self.calculate_overpotential(df)
+                df = self.normalize_data(df)
+                self.data.append(df)
+                self.dataset_names.append(f"{T}/{f}")
 
     def calculate_overpotential(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Calculate overpotential with temperature compensation
         df[self.overpotential_col] = df[self.voltage_col] - df[self.ocv_col]
+        
+        # Add temperature compensation factor
+        temp_factor = 1 + 0.002 * (df[self.temperature_col] - 25)  # 0.2% per degree from 25°C
+        df[self.overpotential_col] *= temp_factor
+        
         return df
 
     def normalize_data(self, df: pd.DataFrame) -> pd.DataFrame:
         for col, norm_range in self.norm_settings.items():
             min_val, max_val = norm_range
             df[col] = (df[col] - min_val) / (max_val - min_val) * 2 - 1
-
         return df
 
     def __len__(self):
@@ -62,18 +64,21 @@ class LGHG2Dataset(Dataset):
     def __getitem__(self, index: int):
         df = self.data[index]
 
-        # OCV_col = self.ocv_col
         X_cols = [self.soc_col, self.current_col, self.temperature_col]
-        Y_col = self.overpotential_col  # self.voltage_col
+        Y_col = self.overpotential_col
         data_length = len(df[self.time_col])
 
-        # OCV = torch.tensor(df[OCV_col], dtype=torch.float32).view(data_length, 1)
+        # Ensure all required columns exist
+        for col in X_cols + [Y_col]:
+            if col not in df.columns:
+                raise ValueError(f"Missing required column: {col}")
+
+        # Create tensors and handle NaN values
         X = torch.stack(
             [torch.tensor(df[col], dtype=torch.float32) for col in X_cols], dim=1
         )
         Y = torch.tensor(df[Y_col], dtype=torch.float32).view(data_length, 1)
 
-        # return (OCV, X), Y
         return X, Y
 
 
@@ -86,6 +91,7 @@ class DataModule(L.LightningDataModule):
         train_split: float = 0.7,
         val_split: float = 0.2,
         test_split: float = 0.1,
+        batch_size: int = 32
     ) -> None:
         super().__init__()
 
@@ -95,6 +101,7 @@ class DataModule(L.LightningDataModule):
         self.train_split = train_split
         self.val_split = val_split
         self.test_split = test_split
+        self.batch_size = batch_size
 
         self.dataset = LGHG2Dataset(data_directory=data_directory)
 
@@ -109,10 +116,26 @@ class DataModule(L.LightningDataModule):
         )
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.training_set, batch_size=1, shuffle=True)
+        return DataLoader(
+            self.training_set, 
+            batch_size=self.batch_size, 
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True
+        )
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.validation_set, batch_size=1)
+        return DataLoader(
+            self.validation_set, 
+            batch_size=self.batch_size,
+            num_workers=4,
+            pin_memory=True
+        )
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self.test_set, batch_size=1)
+        return DataLoader(
+            self.test_set, 
+            batch_size=self.batch_size,
+            num_workers=4,
+            pin_memory=True
+        )
