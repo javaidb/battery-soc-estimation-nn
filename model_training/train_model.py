@@ -36,21 +36,22 @@ def build_model(trial, training_config):
     model_config = training_config.model
     model_class = model_config.model
     
-    # Get hyperparameters from trial
-    hidden_size = trial.suggest_int("hidden_size", 32, 256)
-    num_layers = trial.suggest_int("num_layers", 1, 3)
-    dropout = trial.suggest_float("dropout", 0.1, 0.5)
-    
     # Build model using configuration
     model = model_class(
         input_size=model_config.input_size,
-        hidden_size=hidden_size,
+        hidden_size=trial.params["hidden_size"],
         output_size=model_config.output_size,
-        num_lstm_layers=num_layers,
-        dropout=dropout,
-        bidirectional=model_config.bidirectional if hasattr(model_config, 'bidirectional') else False
+        num_lstm_layers=trial.params["num_lstm_layers"],
     )
-    
+
+    # Add optional parameters only if they exist in config
+    if "dropout" in model_config:
+        model.dropout = model_config.dropout
+    if "bidirectional" in model_config:
+        model.bidirectional = model_config.bidirectional
+    if "use_temperature_aware" in model_config:
+        model.use_temperature_aware = model_config.use_temperature_aware
+
     return model
 
 if __name__ == "__main__":
