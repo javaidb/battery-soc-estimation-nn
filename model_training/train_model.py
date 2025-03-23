@@ -31,10 +31,10 @@ def build_model(trial, training_config):
     
     Args:
         trial: Optuna trial containing hyperparameters
-        training_config: Training configuration dictionary
+        training_config: TrainingConfig object
     """
-    model_config = training_config["model"]
-    model_class = model_config["model"]
+    model_config = training_config.model
+    model_class = model_config.model
     
     # Get hyperparameters from trial
     hidden_size = trial.suggest_int("hidden_size", 32, 256)
@@ -43,12 +43,12 @@ def build_model(trial, training_config):
     
     # Build model using configuration
     model = model_class(
-        input_size=model_config["input_size"],
+        input_size=model_config.input_size,
         hidden_size=hidden_size,
-        output_size=model_config["output_size"],
+        output_size=model_config.output_size,
         num_lstm_layers=num_layers,
         dropout=dropout,
-        bidirectional=model_config.get("bidirectional", True)  # Default to True if not specified
+        bidirectional=model_config.bidirectional if hasattr(model_config, 'bidirectional') else False
     )
     
     return model
@@ -78,20 +78,3 @@ if __name__ == "__main__":
     # Save best model using proper configuration
     best_model = build_model(trial, training_config)
     torch.save(best_model.state_dict(), "./training/output/best_model.pth")
-    
-    # # Save study for later analysis
-    # with mlflow.start_run():
-    #     mlflow.log_params(study.best_trial.params)
-    #     mlflow.log_metric("best_value", study.best_value)
-        
-    #     # Log the best model
-    #     best_model = build_model(study.best_trial)
-    #     mlflow.pytorch.log_model(best_model, "best_model")
-        
-    #     # Log the study results as an artifact
-    #     study.trials_dataframe().to_csv("./training/output/optuna_results.csv")
-    #     mlflow.log_artifact("./training/output/optuna_results.csv")
-    #     print(f"Study saved to ./training/output/optuna_results.csv")
-
-    #     print("To view the Optuna Dashboard, run the following command in your terminal:")
-    #     print("optuna-dashboard sqlite:///optuna.db")
