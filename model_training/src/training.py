@@ -120,9 +120,8 @@ class TrainingModule(pl.LightningModule):
         test_error = self.loss_fn(Y, Y_pred)
         test_accuracy = self.calculate_accuracy(Y, Y_pred)
         
-        # Log metrics with proper reduction
-        self.log("test_loss", test_error, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("test_accuracy", test_accuracy, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("test_loss", test_error, on_step=True, on_epoch=True, sync_dist=True)
+        self.log("test_accuracy", test_accuracy, on_step=True, on_epoch=True, sync_dist=True)
         
         step_output = StepOutput(
             loss=test_error, true_output=Y, model_output=Y_pred
