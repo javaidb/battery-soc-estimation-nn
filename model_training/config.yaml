@@ -36,4 +36,5 @@ optimizer:
   lr: 0.01
 
 trainer:
-  loss_function: rmse
+  loss_function: weighted_rmse  # Use the battery SOC-specific loss function
+  # Other options: weighted_rmse, rmse, mae, mse
