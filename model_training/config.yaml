@@ -1,7 +1,7 @@
-experiment: "SOC Test V1.1: Overpotential Model"
-run_name: "LSTM"
+experiment: "SOC Test V2: Overpotential Model"
+run_name: "EnhancedLSTM"
 include_date_in_run_name: true
-num_trials: 3
+num_trials: 1
 max_epochs: 50
 max_time: 6
 
@@ -10,21 +10,27 @@ model: # Specify arguments to intiialize model class
   hidden_size:
     hyperparameter_type: integer
     name: hidden_size
-    low: 3
-    high: 30
+    low: 4  # Increased minimum for better attention performance
+    high: 60  # Increased maximum for more complex patterns
   output_size: 1
   num_lstm_layers:
     hyperparameter_type: integer
     name: num_lstm_layers
     low: 1
-    high: 6
+    high: 3
+  # dropout:
+  #   hyperparameter_type: float
+  #   name: dropout
+  #   low: 0.1
+  #   high: 0.5
+  # bidirectional: true  # Enable bidirectional processing
 
 data_module: # Specify arguments to initialize data module class
   data_directory: "./data/Mendeley/3_processed/" #"../data/processed/"
   train_split: 0.7
   val_split: 0.2
   test_split: 0.1
-
+  batch_size: 1
 optimizer:
   optimizer_algorithm: adam
   lr: 0.01
