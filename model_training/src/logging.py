@@ -46,6 +46,9 @@ class Logger(Callback):
         self._init_time = datetime.utcnow().strftime("%Y_%m_%d_T%H_%M_%SZ")
         self._fit_start_timestamp = float("nan")
         self._epoch_start_timestamp = float("nan")
+        
+        # Store metrics history for each trial
+        self._trial_metrics = {}
 
     @property
     def experiment(self) -> str:
@@ -64,25 +67,25 @@ class Logger(Callback):
 
     @property
     def run_name(self) -> str:
-        """Name of parent MLflow run, defaults to a timestamp."""
-        if self._run_name is not None:
-            if self._include_date_in_run_name:
-                return f"{self._run_name}_{self._init_time}"
+        """MLflow run name."""
+        if self._run_name is None:
+            return f"run_{self._init_time}"
+        elif self._include_date_in_run_name:
+            return f"{self._run_name}_{self._init_time}"
+        else:
             return self._run_name
 
-        return f"{self._init_time}"
+    @property
+    def model_artifact_path(self) -> str:
+        """Artifact path for saved models."""
+        
+        return self._model_artifact_path
 
     @property
     def experiment_tags(self) -> dict:
         """MLflow experiment tags."""
 
         return self._experiment_tags
-
-    @property
-    def model_artifact_path(self) -> str:
-        """Artifact path for models."""
-
-        return self._model_artifact_path
 
     @contextmanager
     def start_hyperparameter_tuning_logs(self) -> None:
@@ -101,11 +104,19 @@ class Logger(Callback):
     @contextmanager
     def start_trial_logs(self, trial: Trial, run_name: str = None) -> None:
         """Starts MLflow logging for a single hyperparameter tuning trial."""
+        # Initialize metrics history for this trial
+        self._trial_metrics[trial.number] = {
+            'val_loss': [],
+            'val_accuracy': [],
+            'epochs': []
+        }
 
+        trial_run_name = f"trial_{trial.number}" if run_name is None else run_name
         try:
             yield mlflow.start_run(
                 experiment_id=self.experiment_id,
-                run_name=f"trial_{trial.number}" if run_name is None else run_name,
+                run_name=trial_run_name,
+                tags={"mlflow.runName": trial_run_name},
                 description=f"Trial #{trial.number} for run {self.run_name}",
                 nested=True,
             )
@@ -114,12 +125,10 @@ class Logger(Callback):
             # Log trial parameters
             mlflow.log_params(trial.params)
             
-            # # Log trial metrics if available
-            # if hasattr(trial, 'user_attrs'):
-            #     for key, value in trial.user_attrs.items():
-            #         if isinstance(value, (int, float)):
-            #             print(f"Key: {key} Value: {value}")
-            #             mlflow.log_metric(key, value)
+            # Log the complete metrics history for this trial
+            if trial.number in self._trial_metrics:
+                metrics_history = self._trial_metrics[trial.number]
+                mlflow.log_dict(metrics_history, f"trial_{trial.number}_metrics_history.json")
             
             mlflow.end_run()
 
@@ -236,7 +245,6 @@ class Logger(Callback):
         self, trainer: pl.Trainer, pl_module: pl.LightningModule
     ) -> None:
         """PyTorch module callback for validation epoch end."""
-
         epoch_num = pl_module.current_epoch
         if epoch_num == 0:
             return
@@ -251,6 +259,30 @@ class Logger(Callback):
         
         print(f"Validation Loss: {validation_loss}")
         print(f"Validation Accuracy: {validation_accuracy}")
+        
+        # Store metrics in history for current trial
+        current_run = mlflow.active_run()
+        print("\n=== Debug: MLflow Run Info ===")
+        print(f"Active run exists: {current_run is not None}")
+        if current_run:
+            print(f"Run data exists: {hasattr(current_run, 'data')}")
+            if hasattr(current_run, 'data'):
+                print(f"Run info: {current_run.info}")
+                print(f"Run data: {current_run.data}")
+                print(f"Run tags: {current_run.data.tags}")
+                if hasattr(current_run.data, 'tags'):
+                    run_name = current_run.data.tags.get('mlflow.runName', '')
+                    print(f"Run name from tags: {run_name}")
+                    print(f"Run name starts with 'trial_': {run_name.startswith('trial_')}")
+                    if run_name.startswith('trial_'):
+                        trial_number = int(run_name.split('_')[1])
+                        print(f"Trial number: {trial_number}")
+                        print(f"Trial number in metrics: {trial_number in self._trial_metrics}")
+                        if trial_number in self._trial_metrics:
+                            self._trial_metrics[trial_number]['val_loss'].append(validation_loss)
+                            self._trial_metrics[trial_number]['val_accuracy'].append(validation_accuracy)
+                            self._trial_metrics[trial_number]['epochs'].append(epoch_num)
+                            print(f"Stored metrics for trial {trial_number}")
         
         mlflow.log_metric(
             key="val_loss",
