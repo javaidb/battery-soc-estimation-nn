@@ -1,0 +1,22 @@
+{
+     "data_labels": {
+          "mendeley": {
+               "description": "Data obtained from https://data.mendeley.com/datasets/cp3473x7xv/3",
+               "signals_to_columns": {
+                    "timestamp_col": "Timestamp",
+                    "time_col": "Time [min]",
+                    "voltage_col": "Voltage [V]",
+                    "current_col": "Current [A]",
+                    "temperature_col": "Temperature [degC]",
+                    "capacity_col": "Capacity [Ah]",
+                    "soc_col": "SOC [-]",
+                    "ocv_col": "Open Circuit Voltage [V]"
+               },
+               "directories": {
+                    "raw_data": "data/Mendeley/1_raw",
+                    "formatted_data": "data/Mendeley/2_formatted",
+                    "processed_data": "data/Mendeley/3_processed"
+               }
+          }
+     }
+}
