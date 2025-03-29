@@ -1,25 +1,25 @@
 # Battery State Estimation using Neural Nets (SOC)
 
-> This repository is a part of a series of repositories aimed at deepening personal understanding of lithium-ion battery management systems along with practical implementations and contexts. Through this repo, I explore advanced battery State of Charge (SOC) estimation using deep learning techniques, mainly for me to expand on experience learnt in career + courses + self-learning while identifying areas for self-improvement in my own knowledge and skills. It is designed more so as a sandbox for me to develop, test and implement state estimation techniques for various sample li-ion batteries. This project implements an LSTM-based architecture with attention mechanisms for accurate real-time SOC prediction.
+> This repository is a part of a series of repositories aimed at deepening personal understanding of lithium-ion battery management systems along with practical implementations and contexts. Through this repo, I explore advanced battery State of Charge (SOC) estimation using deep learning techniques, mainly for me to expand on experience learnt in career + courses + self-learning while identifying areas for self-improvement in my own knowledge and skills. It is designed more so as a sandbox for me to develop, test and implement state estimation techniques for various sample li-ion batteries. This project implements an LSTM-based architecture for accurate real-time SOC prediction using an overpotential modeling approach.
 
 ## Project Overview
 
 This project implements a neural network-based approach to battery State of Charge estimation, using the following components:
-- Bidirectional LSTM for temporal pattern recognition (i.e. timeseries format with various features throughout)
-- Multi-head attention mechanisms for feature importance weighting
+- LSTM networks for temporal pattern recognition (i.e. timeseries format with various features throughout)
+- Temperature-aware scaling for improved prediction in varying conditions
 - Physics-informed architecture incorporating battery behavior (OCV, overpotential, etc.)
 - MLflow integration for experiment tracking
 
 ### Key Features
 
-- **Advanced Architecture**:
-  - Bidirectional LSTM layers for temporal dependencies
-  - Multi-head attention mechanism
-  - Skip connections for improved gradient flow
+- **Neural Network Architecture**:
+  - LSTM layers for temporal dependencies
   - Layer normalization for training stability
+  - Batch normalization for improved training
+  - Dropout for regularization
 
 - **Battery-Specific Design**:
-  - Overpotential prediction
+  - Overpotential prediction as core modeling approach
   - Open Circuit Voltage (OCV) integration
   - Temperature compensation
   - Current-based dynamics modeling
